@@ -3,7 +3,8 @@ import csv
 import urllib.request
 from bs4 import BeautifulSoup
 
-#This file takes a csv of the top sites and checks for how many of them use DNS Prefetching
+# This file takes a csv of the top sites and checks for how many of them use DNS Prefetching
+# Written for python3
 # https://dev.chromium.org/developers/design-documents/dns-prefetching
 def main():
         # total websites reviewed
@@ -19,6 +20,7 @@ def main():
         with open("top-1m.csv", "r") as webcsv:
                 rdr = csv.reader(webcsv, delimiter=',')
                 for rank, sitename in rdr:
+                        # I don't want to visit .ru sites on my network
                         if (".ru" not in sitename):
                                 print(sitename)
                                 try: 
@@ -46,11 +48,11 @@ def main():
                                 #except TimeoutError:
                                 #        print("TimeoutError: unable to load " + sitename)
                                 #        continue
-        print("Sites reviewed: " + str(totalsites))
-        print("Sites with rel=\"dns-prefetch\": " + str(linkrel))
-        print("% with rel=\"dns-prefetch\": " + str(float(linkrel)/totalsites))
-        print("Sites specifying some sort of x-dns-prefetch-control: " + str(metadns))
-        print("% with x-dns-prefetch control: " + str(float(metadns)/totalsites))
+        print("Sites reviewed: {}".format(totalsites))
+        print("Sites with rel=\"dns-prefetch\": {}".format(linkrel))
+        print("% with rel=\"dns-prefetch\": {}".format(float(linkrel)/totalsites))
+        print("Sites specifying some sort of x-dns-prefetch-control: {}".format(metadns))
+        print("% with x-dns-prefetch control: {}".format(float(metadns)/totalsites))
 
 if __name__ == "__main__":
         main()
