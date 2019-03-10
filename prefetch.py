@@ -1,6 +1,13 @@
-# TODO: Implement with alexatop10k.sh
-# import re
+#TODO: Crontab
+#TODO: Download and use latest top-1m.csv
+#TODO: Timestamping Results
+
+
+
 import csv
+import zipfile
+import time
+import datetime
 import argparse
 import urllib.request
 from bs4 import BeautifulSoup
@@ -17,30 +24,48 @@ def main():
         parser.add_argument("-m", "--max", help="max number of websites to successfully scan before exiting", default=10000, type=int)
         args = parser.parse_args()
         maxsites = args.max
+        timeout = args.timeout
         # total websites reviewed
         totalsites = 0
         # websites with rel="dns-prefetch
         linkrel = 0
         # websites with meta http-equiv="x-dns-prefetch-control"
         metadns = 0
+        #sites that could not load
+        failedsites = 0
 
-        # Check for real timeout time
-        if (args.timeout < 1):
+        # Check for real timeout time and maxsites
+        if (timeout < 1 or maxsites < 1):
                 print("Need a positive timeout time")
                 quit()
 
-        # compile regex
-        #linkrelreg = re.compile(r"link\W+href=\"[a-zA-Z0-9\/\.]+\"\W+rel=\"dns-prefetch\"", re.IGNORECASE)
+        # Retrieve the latest top-1m.csv file
+        fetchurl = "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
+        try:
+                urllib.request.urlretrieve(fetchurl, "top-1m.zip")
+        except Exception as e:
+                print("{}: unable to download zip file".format(e))
 
+        # unzip it
+        with zipfile.ZipFile("top-1m.zip", "r") as zippedcsv:
+                zippedcsv.extractall()
+
+        # get cur time for our file creation
+        filetime = time.strftime("%m-%d-%y_%H", time.localtime())
+
+        starttime = datetime.datetime.now() 
+
+        # Reading csv
         with open("top-1m.csv", "r") as webcsv:
                 rdr = csv.reader(webcsv, delimiter=',')
                 for rank, sitename in rdr:
                         # break if we've gone over the specified max number of sites to check
                         if (totalsites >= maxsites):
                                 break
+                        # Try cause to catch any exceptions HTTP GETting a website may encounter
                         try: 
                                 # HTTPS?
-                                contents = urllib.request.urlopen("http://" + sitename, timeout=args.timeout).read()
+                                contents = urllib.request.urlopen("http://" + sitename, timeout=timeout).read()
                                 soup = BeautifulSoup(contents, 'html.parser')
                                 if (args.verbose):
                                         print(sitename)
@@ -59,18 +84,25 @@ def main():
                         except Exception as e:
                                 if (args.debug):
                                         print("{}: unable to load {}".format(e, sitename))
+                                failedsites += 1
                                 continue
-                        #except urllib.error.URLError:
-                        #        print("URLError: unable to load " + sitename)
-                        #        continue
-                        #except TimeoutError:
-                        #        print("TimeoutError: unable to load " + sitename)
-                        #        continue
-        print("Sites reviewed: {}".format(totalsites))
-        print("Sites with rel=\"dns-prefetch\": {}".format(linkrel))
-        print("% with rel=\"dns-prefetch\": {}".format(float(linkrel)/totalsites))
-        print("Sites specifying some sort of x-dns-prefetch-control: {}".format(metadns))
-        print("% with x-dns-prefetch control: {}".format(float(metadns)/totalsites))
+
+        # Create our output file
+        # outname = "/home/ubuntu/sdf/dnsstapling/results/prefetch/{}top{}".format(filetime, maxsites)
+        outname = "{}top{}".format(filetime, maxsites)
+        print(outname)
+        outfile = open(outname, "w")
+
+        outfile.write("Parameters: timeout={} maxsites={}\n".format(timeout, maxsites))
+        outfile.write("Sites reviewed: {}\n".format(totalsites))
+        outfile.write("Sites with rel=\"dns-prefetch\": {}\n".format(linkrel))
+        outfile.write("% with rel=\"dns-prefetch\": {}\n".format(float(linkrel)/totalsites))
+        outfile.write("Sites specifying some sort of x-dns-prefetch-control: {}\n".format(metadns))
+        outfile.write("% with x-dns-prefetch control: {}\n".format(float(metadns)/totalsites))
+        outfile.write("Sites that failed to connect for any reason: {}\n".format(failedsites))
+        outfile.write("Ran from {} until {}\n".format(starttime, datetime.datetime.now()))
+
+        outfile.close()
 
 if __name__ == "__main__":
         main()
