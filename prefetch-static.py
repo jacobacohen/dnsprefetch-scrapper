@@ -37,17 +37,6 @@ def main():
                 print("Need a positive timeout time")
                 quit()
 
-        # Retrieve the latest top-1m.csv file
-        fetchurl = "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
-        try:
-                urllib.request.urlretrieve(fetchurl, "top-1m.zip")
-        except Exception as e:
-                print("{}: unable to download zip file".format(e))
-
-        # unzip it
-        with zipfile.ZipFile("top-1m.zip", "r") as zippedcsv:
-                zippedcsv.extractall()
-
         # get cur time for our file creation
         filetime = time.strftime("%m-%d-%y_%H", time.localtime())
 
@@ -62,6 +51,9 @@ def main():
                                 break
                         # Try cause to catch any exceptions HTTP GETting a website may encounter
                         try: 
+                                # vars for printing to individual files
+                                rels = []
+                                metas = []
                                 # Do sites that are HTTP only still connect?
                                 contents = getHTTP(sitename, timeout)
                                 # contents = urllib.request.urlopen(url, timeout=timeout).read()
@@ -70,16 +62,18 @@ def main():
                                         print(sitename)
                                 if (soup.find_all(rel="dns-prefetch") != []):
                                         linkrel += 1
-                                #for rel in soup.find_all(rel="dns-prefetch"):
-                                #        print(rel)
+                                for rel in soup.find_all(rel="dns-prefetch"):
+                                        rels.append(rel)
                                 for meta in soup.find_all("meta"):
                                         # need to fix case insensitive
                                         metahttp = meta.get('http-equiv', '').lower()
                                         # need to get content on/off?
                                         # metacontent = meta.get('content', '').lower()
                                         if (metahttp == "x-dns-prefetch-control"):
-                                                # print(meta)
+                                                metas.append(meta)
                                                 metadns += 1
+                                # write results to own file, regardless of if the site was able to connect (?)
+                                writesite(rank, sitename, rels, metas)
                                 totalsites += 1
                         except KeyboardInterrupt:
                                 break
@@ -115,15 +109,15 @@ def getHTTP(sitename, timeout):
 
 # Write site results to an individual file
 def writesite(rank, sitename, rels, metas):
-        sitefile = open("dns_top{}".format(rank))
+        sitefile = open("results/dns_top{}".format(rank), "w")
         # sitefile = open("/wherever/results/dns_top{}".format(rank))
         sitefile.write("https://{}\n".format(sitename))
         # write all rel links
         for tag in rels:
-                sitefile.write(tag)
+                sitefile.write(str(tag) + "\n")
         # write all dns meta specifiers
         for tag in metas:
-                sitefile.write(tag)
+                sitefile.write(str(tag) + "\n")
         sitefile.close()
 
 # Use to complete webpage processing
