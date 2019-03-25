@@ -31,7 +31,11 @@ def main():
         metadns = 0
         #sites that could not load
         failedsites = 0
-
+        
+        # total found rel tags (i.e. one per tag)
+        totalrel = 0
+        # total found meta tags
+        totalmeta = 0
         # Check for real timeout time and maxsites
         if (timeout < 1 or maxsites < 1):
                 print("Need a positive timeout time")
@@ -70,8 +74,7 @@ def main():
                                         print(sitename)
                                 if (soup.find_all(rel="dns-prefetch") != []):
                                         linkrel += 1
-                                #for rel in soup.find_all(rel="dns-prefetch"):
-                                #        print(rel)
+                                totalrel += len(soup.find_all(rel="dns-prefetch"))
                                 for meta in soup.find_all("meta"):
                                         # need to fix case insensitive
                                         metahttp = meta.get('http-equiv', '').lower()
@@ -80,6 +83,7 @@ def main():
                                         if (metahttp == "x-dns-prefetch-control"):
                                                 # print(meta)
                                                 metadns += 1
+                                                totalmeta += 1
                                 totalsites += 1
                         except KeyboardInterrupt:
                                 break
@@ -99,8 +103,10 @@ def main():
         outfile.write("Sites reviewed: {}\n".format(totalsites))
         outfile.write("Sites with rel=\"dns-prefetch\": {}\n".format(linkrel))
         outfile.write("% with rel=\"dns-prefetch\": {}\n".format(float(linkrel)/totalsites))
+        outfile.write("Total rel= tags found: {}\n".format(totalrel))
         outfile.write("Sites specifying some sort of x-dns-prefetch-control: {}\n".format(metadns))
         outfile.write("% with x-dns-prefetch control: {}\n".format(float(metadns)/totalsites))
+        outfile.write("Total x-dns-prefetch tags found: {}\n".format(totalmeta))
         outfile.write("Sites that failed to connect for any reason: {}\n".format(failedsites))
         outfile.write("Ran from {} until {}\n".format(starttime, datetime.datetime.now()))
 

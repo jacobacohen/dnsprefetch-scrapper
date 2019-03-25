@@ -73,11 +73,13 @@ def main():
                                                 metas.append(meta)
                                                 metadns += 1
                                 # write results to own file, regardless of if the site was able to connect (?)
-                                writesite(rank, sitename, rels, metas)
                                 totalsites += 1
                         except KeyboardInterrupt:
                                 break
                         except Exception as e:
+                                # Site failed, print site and rank anyway with error message
+                                rels.append("Connection failure")
+                                writesite(rank, sitename, rels, metas)
                                 if (args.debug):
                                         print("{}: unable to load {}".format(e, sitename))
                                 failedsites += 1
